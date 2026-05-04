@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#047857" />
+  <title>14 хоног — Эрүүл амьдралын төлөвлөгөө</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --primary: #10b981;
+      --primary-dark: #047857;
+      --primary-light: #d1fae5;
+      --accent: #f59e0b;
+      --movement: #3b82f6;
+      --nutrition: #f59e0b;
+      --goal: #e11d48;
+      --study: #8b5cf6;
+      --sleep: #6366f1;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+      background: linear-gradient(180deg, #ecfdf5 0%, #f8fafc 240px, #f8fafc 100%);
+      background-attachment: fixed;
+      color: var(--text);
+      line-height: 1.5;
+      padding: 14px;
+      max-width: 760px;
+      margin: 0 auto;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+
+    /* HEADER */
+    header {
+      background: linear-gradient(135deg, #047857 0%, #10b981 70%, #34d399 100%);
+      border-radius: 20px;
+      padding: 22px;
+      margin-bottom: 14px;
+      box-shadow: 0 8px 24px rgba(4, 120, 87, 0.18);
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+    header::before {
+      content: ''; position: absolute; right: -40px; top: -40px;
+      width: 160px; height: 160px; border-radius: 50%;
+      background: rgba(255,255,255,0.08); pointer-events: none;
+    }
+    header::after {
+      content: ''; position: absolute; right: 40px; bottom: -60px;
+      width: 120px; height: 120px; border-radius: 50%;
+      background: rgba(255,255,255,0.06); pointer-events: none;
+    }
+    .header-content { position: relative; z-index: 1; }
+    h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+    .header-sub { font-size: 12.5px; opacity: 0.88; margin-top: 3px; margin-bottom: 18px; font-weight: 500; }
+
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+    .stat {
+      background: rgba(255,255,255,0.14);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      padding: 12px 8px; border-radius: 12px; text-align: center;
+      border: 1px solid rgba(255,255,255,0.18);
+    }
+    .stat-label { font-size: 10px; opacity: 0.88; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 700; }
+    .stat-value { font-size: 21px; font-weight: 700; letter-spacing: -0.5px; }
+    .stat.streak.active .stat-value { color: #fde047; }
+
+    .progress-bar { height: 6px; background: rgba(255,255,255,0.22); border-radius: 3px; overflow: hidden; margin-bottom: 14px; }
+    .progress-fill { height: 100%; background: white; border-radius: 3px; transition: width 0.5s ease; box-shadow: 0 0 8px rgba(255,255,255,0.5); }
+
+    /* 14-day timeline */
+    .timeline {
+      display: grid; grid-template-columns: repeat(14, 1fr);
+      gap: 4px; margin-bottom: 14px;
+    }
+    .timeline-day {
+      height: 36px; border-radius: 7px;
+      background: rgba(255,255,255,0.12);
+      position: relative; overflow: hidden;
+      cursor: pointer; transition: all 0.15s;
+      border: 1.5px solid transparent;
+    }
+    .timeline-day:hover { background: rgba(255,255,255,0.2); }
+    .timeline-fill {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: rgba(255, 255, 255, 0.55);
+      transition: height 0.4s ease;
+    }
+    .timeline-day .num {
+      position: relative; z-index: 1;
+      display: flex; align-items: center; justify-content: center;
+      height: 100%; font-size: 11px; font-weight: 700; color: white;
+    }
+    .timeline-day.today { border-color: #fde047; }
+    .timeline-day.viewing { border-color: white; box-shadow: 0 0 0 2px rgba(255,255,255,0.3); }
+    .timeline-day.full .timeline-fill { background: #fde047; }
+
+    /* Weight chart */
+    .chart-wrap {
+      background: rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 12px 14px;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .chart-title { font-size: 11px; font-weight: 700; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.6px; }
+    .chart-change { font-size: 13px; font-weight: 700; }
+    .chart-svg { width: 100%; height: 100px; display: block; }
+    .chart-empty { font-size: 12px; opacity: 0.75; text-align: center; padding: 24px 8px; }
+
+    /* Next up */
+    .next-up {
+      background: white;
+      border-radius: 14px;
+      padding: 12px 16px;
+      margin-bottom: 14px;
+      display: flex; align-items: center; gap: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      border-left: 4px solid var(--primary);
+      transition: all 0.2s;
+    }
+    .next-up.overdue { border-left-color: var(--accent); }
+    .next-up.now { border-left-color: var(--goal); animation: pulse 2s ease-in-out infinite; }
+    .next-up.allDone { border-left-color: var(--text-muted); background: var(--primary-light); }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+      50% { box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.1); }
+    }
+    .next-up-info { flex: 1; min-width: 0; }
+    .next-up-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 700; }
+    .next-up-task { font-size: 14px; font-weight: 600; margin-top: 2px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .next-up-time { font-size: 12px; color: var(--text-muted); font-weight: 600; flex-shrink: 0; padding: 4px 10px; background: var(--bg); border-radius: 8px; }
+
+    /* Day navigator */
+    .day-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      background: white; border-radius: 14px; padding: 8px 12px;
+      margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .day-nav button {
+      background: var(--primary-light); border: none; width: 38px; height: 38px;
+      border-radius: 10px; font-size: 18px; cursor: pointer; color: var(--primary-dark);
+      font-weight: 700; transition: all 0.15s;
+    }
+    .day-nav button:hover:not(:disabled) { background: var(--primary); color: white; transform: scale(1.05); }
+    .day-nav button:disabled { opacity: 0.3; cursor: not-allowed; }
+    .day-label { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .today-badge { background: var(--primary); color: white; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 10px; letter-spacing: 0.5px; }
+
+    /* Main */
+    main { background: white; border-radius: 16px; padding: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+
+    .section { margin-bottom: 18px; }
+    .section:last-of-type { margin-bottom: 0; }
+    .section-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding-left: 2px; }
+    .section-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .section-title {
+      font-size: 11px; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.8px;
+    }
+
+    /* Tasks */
+    .task-row {
+      border-radius: 12px;
+      margin-bottom: 4px;
+      overflow: hidden;
+      border: 1px solid transparent;
+      transition: all 0.15s;
+    }
+    .task-row.done {
+      background: var(--primary-light);
+      border-color: rgba(16, 185, 129, 0.25);
+    }
+    .task-row.expanded {
+      border-color: var(--border);
+      background: #f8fafc;
+    }
+    .task-row.done.expanded { background: #ecfdf5; }
+
+    .task {
+      display: flex; align-items: center; padding: 11px 8px 11px 12px;
+      user-select: none;
+    }
+    .task input[type="checkbox"] {
+      width: 22px; height: 22px; margin-right: 12px;
+      cursor: pointer; accent-color: var(--primary); flex-shrink: 0;
+    }
+    .task label {
+      flex: 1; cursor: pointer; font-size: 14.5px;
+      padding: 4px 0;
+    }
+    .task.done label { color: var(--text-muted); text-decoration: line-through; }
+    .task-expand {
+      background: transparent; border: none; padding: 6px 8px;
+      cursor: pointer; color: var(--text-muted); border-radius: 6px;
+      font-size: 14px; transition: all 0.2s;
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .task-expand:hover { background: rgba(0,0,0,0.06); color: var(--text); }
+    .task-expand.open { transform: rotate(180deg); }
+
+    .task-detail {
+      padding: 0 12px 12px 46px;
+      display: none;
+    }
+    .task-row.expanded .task-detail { display: block; }
+    .task-detail textarea {
+      width: 100%; font-family: inherit; font-size: 13px;
+      padding: 9px 11px; border: 1px solid var(--border);
+      border-radius: 8px; background: white; outline: none;
+      resize: vertical; min-height: 60px; line-height: 1.45;
+      color: var(--text);
+    }
+    .task-detail textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
+    .task-detail .hint { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+
+    /* Inputs */
+    .extra { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+    .input-group { display: flex; flex-direction: column; }
+    .input-group > label { font-size: 11px; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 700; }
+    .input-group input, .extra textarea {
+      font-family: inherit; font-size: 14px; padding: 10px 12px;
+      border: 1px solid var(--border); border-radius: 10px; background: #f8fafc;
+      color: var(--text); outline: none; transition: all 0.15s;
+    }
+    .input-group input:focus, .extra textarea:focus {
+      border-color: var(--primary);
+      background: white;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+    .extra textarea { grid-column: 1 / -1; resize: vertical; min-height: 70px; line-height: 1.5; }
+
+    /* Day progress */
+    .day-progress { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+    .day-progress-text { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+    .day-progress-text strong { color: var(--text); font-weight: 700; }
+    .day-progress .progress-bar { background: var(--border); height: 8px; }
+    .day-progress .progress-fill { background: linear-gradient(90deg, var(--primary), var(--primary-dark)); box-shadow: none; }
+
+    /* Footer */
+    footer { margin-top: 14px; padding: 8px 0 24px; }
+    .footer-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+    .footer-actions button {
+      background: white; border: 1px solid var(--border); color: var(--text-muted);
+      padding: 8px 14px; border-radius: 10px; cursor: pointer; font-size: 12px;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+    .footer-actions button:hover { background: var(--bg); color: var(--text); border-color: #cbd5e1; }
+    .footer-actions button.danger:hover { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+
+    .file-input { display: none; }
+
+    /* Mobile */
+    @media (max-width: 480px) {
+      body { padding: 8px; }
+      header { padding: 18px 16px; border-radius: 16px; }
+      h1 { font-size: 19px; }
+      .stats { gap: 6px; }
+      .stat { padding: 10px 4px; }
+      .stat-value { font-size: 18px; }
+      .stat-label { font-size: 9px; }
+      .timeline-day { height: 32px; }
+      .timeline-day .num { font-size: 10px; }
+      .extra { grid-template-columns: 1fr; }
+      main { padding: 16px; border-radius: 14px; }
+      .section { margin-bottom: 14px; }
+      .task { padding: 10px 6px 10px 10px; }
+      .task label { font-size: 14px; }
+      .task-detail { padding: 0 10px 10px 42px; }
+      .next-up { padding: 10px 12px; }
+      .next-up-task { font-size: 13px; }
+      .footer-actions button { padding: 7px 11px; font-size: 11px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-content">
+      <h1>14 хоног — Эрүүл амьдрал</h1>
+      <div class="header-sub">16:8 IF · Хөдөлгөөн · Чихэргүй · Англи хэл</div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-label">Өнөөдөр</div>
+          <div class="stat-value" id="todayDay">—</div>
+        </div>
+        <div class="stat streak" id="streakStat">
+          <div class="stat-label">Чихэргүй цуваа</div>
+          <div class="stat-value" id="sugarStreak">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Гүйцэтгэл</div>
+          <div class="stat-value" id="overallPct">0%</div>
+        </div>
+      </div>
+
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+      <div class="timeline" id="timeline"></div>
+
+      <div class="chart-wrap" id="chartWrap"></div>
+    </div>
+  </header>
+
+  <div class="next-up" id="nextUp"></div>
+
+  <div class="day-nav">
+    <button id="prevDay" aria-label="Өмнөх өдөр">←</button>
+    <div class="day-label">
+      <span id="dayLabel">Өдөр 1</span>
+      <span class="today-badge" id="todayBadge" style="display:none">ӨНӨӨДӨР</span>
+    </div>
+    <button id="nextDay" aria-label="Дараагийн өдөр">→</button>
+  </div>
+
+  <main id="dayContainer"></main>
+
+  <footer>
+    <div class="footer-actions">
+      <button id="exportBtn">Тэмдэглэлээ татах</button>
+      <button id="importBtn">Тэмдэглэл оруулах</button>
+      <button id="resetBtn" class="danger">Бүх өгөгдлийг устгах</button>
+    </div>
+    <input type="file" id="fileInput" class="file-input" accept="application/json" />
+  </footer>
+
+  <script>
+    const TOTAL_DAYS = 14;
+    const STORAGE_KEY = 'health14-tracker';
+
+    const tasks = [
+      { id: 'walk',          label: 'Өглөөний алхалт 30-45 мин',           section: 'Хөдөлгөөн',   sectionColor: '#3b82f6', time: '07:00', hint: 'Хэдэн минут? Маршрут? Мэдрэмж?' },
+      { id: 'workout',       label: 'Хүчний дасгал 15-20 мин',             section: 'Хөдөлгөөн',   sectionColor: '#3b82f6', time: '17:30', hint: 'Ямар дасгал хийсэн? Хэдэн ээлж, хэдэн давталт?' },
+      { id: 'fastingWindow', label: '16:8 цаг баримталсан (12:00-20:00)',  section: 'Хооллолт',    sectionColor: '#f59e0b', time: '12:00', hint: 'Хэдэн цагт хооллож эхэлсэн? Хэзээ дуусгасан?' },
+      { id: 'meal1',         label: 'Өдрийн хоол — уураг + ногоо',         section: 'Хооллолт',    sectionColor: '#f59e0b', time: '12:00', hint: 'Юу идсэн вэ? Хэр их хэмжээтэй?' },
+      { id: 'snack',         label: 'Зууш 16:00 (жимс/самар/тараг)',       section: 'Хооллолт',    sectionColor: '#f59e0b', time: '16:00', hint: 'Юу идсэн вэ?' },
+      { id: 'meal2',         label: 'Оройн хоол — уураг + ногоо',          section: 'Хооллолт',    sectionColor: '#f59e0b', time: '19:30', hint: 'Юу идсэн вэ? Хэр их хэмжээтэй?' },
+      { id: 'water',         label: 'Ус 2-2.5 литр',                       section: 'Хооллолт',    sectionColor: '#f59e0b', time: '20:00', hint: 'Хэдэн литр уусан вэ?' },
+      { id: 'noSugar',       label: 'Чихэр / газтай ундаа уугаагүй',       section: 'Гол зорилго', sectionColor: '#e11d48', time: '21:00', hint: 'Хүсэл орсон уу? Хэрхэн даван туулсан?' },
+      { id: 'english',       label: 'Англи хэл 30 мин',                    section: 'Хичээл',      sectionColor: '#8b5cf6', time: '08:00', hint: 'Юу үзсэн? Аль апп/материал? Шинэ үг?' },
+      { id: 'sleep',         label: 'Унтах 22:30-аас өмнө',                section: 'Нойр',        sectionColor: '#6366f1', time: '22:30', hint: 'Хэдэн цагт унтсан? Чанар?' }
+    ];
+
+    const todayISO = () => {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      return d.toISOString().slice(0, 10);
+    };
+
+    const initData = () => ({ startDate: todayISO(), days: {} });
+
+    function loadData() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return initData();
+        const p = JSON.parse(raw);
+        if (!p.startDate) p.startDate = todayISO();
+        if (!p.days) p.days = {};
+        return p;
+      } catch (e) { return initData(); }
+    }
+
+    const saveData = d => localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
+
+    function getCurrentDay(d) {
+      const start = new Date(d.startDate + 'T00:00:00');
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const diff = Math.floor((now - start) / 86400000);
+      return Math.min(Math.max(diff + 1, 1), TOTAL_DAYS);
+    }
+
+    function getDay(n) {
+      if (!data.days[n]) data.days[n] = { tasks: {}, taskNotes: {}, weight: '', waist: '', notes: '' };
+      if (!data.days[n].taskNotes) data.days[n].taskNotes = {};
+      return data.days[n];
+    }
+
+    function dayCompletion(n) {
+      const d = data.days[n];
+      if (!d) return 0;
+      return tasks.filter(t => d.tasks[t.id]).length / tasks.length;
+    }
+
+    function calcStreak() {
+      let streak = 0;
+      const today = getCurrentDay(data);
+      for (let i = today; i >= 1; i--) {
+        const d = data.days[i];
+        const ok = d && d.tasks.noSugar;
+        if (ok) streak++;
+        else if (i < today) break;
+      }
+      return streak;
+    }
+
+    function getNextUp() {
+      const now = new Date();
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+      const today = getCurrentDay(data);
+      const day = data.days[today] || { tasks: {} };
+
+      const pending = tasks
+        .filter(t => !day.tasks[t.id])
+        .map(t => {
+          const [h, m] = t.time.split(':').map(Number);
+          return { ...t, minutes: h * 60 + m };
+        });
+
+      if (pending.length === 0) return { allDone: true };
+
+      pending.sort((a, b) => a.minutes - b.minutes);
+
+      const upcoming = pending.find(t => t.minutes >= nowMin);
+      if (upcoming) {
+        const delta = upcoming.minutes - nowMin;
+        return { ...upcoming, status: delta <= 30 ? 'now' : 'upcoming', delta };
+      }
+      return { ...pending[pending.length - 1], status: 'overdue' };
+    }
+
+    let data = loadData();
+    let viewDay = getCurrentDay(data);
+    let expandedTasks = new Set();
+
+    function renderHeader() {
+      const today = getCurrentDay(data);
+      document.getElementById('todayDay').textContent = today + ' / ' + TOTAL_DAYS;
+
+      const streak = calcStreak();
+      document.getElementById('sugarStreak').textContent = streak;
+      document.getElementById('streakStat').classList.toggle('active', streak >= 3);
+
+      let totalDone = 0;
+      const possible = today * tasks.length;
+      for (let i = 1; i <= today; i++) {
+        const d = data.days[i];
+        if (d) totalDone += tasks.filter(t => d.tasks[t.id]).length;
+      }
+      const pct = possible > 0 ? Math.round((totalDone / possible) * 100) : 0;
+      document.getElementById('overallPct').textContent = pct + '%';
+      document.getElementById('progressFill').style.width = pct + '%';
+    }
+
+    function renderTimeline() {
+      const today = getCurrentDay(data);
+      const tl = document.getElementById('timeline');
+      let html = '';
+      for (let i = 1; i <= TOTAL_DAYS; i++) {
+        const pct = Math.round(dayCompletion(i) * 100);
+        const cls = ['timeline-day'];
+        if (i === today) cls.push('today');
+        if (i === viewDay) cls.push('viewing');
+        if (pct === 100) cls.push('full');
+        html += '<div class="' + cls.join(' ') + '" data-day="' + i + '" title="Өдөр ' + i + ' — ' + pct + '%">'
+          + '<div class="timeline-fill" style="height:' + pct + '%"></div>'
+          + '<span class="num">' + i + '</span>'
+          + '</div>';
+      }
+      tl.innerHTML = html;
+      tl.querySelectorAll('.timeline-day').forEach(el => {
+        el.addEventListener('click', () => {
+          viewDay = parseInt(el.dataset.day, 10);
+          render();
+        });
+      });
+    }
+
+    function renderChart() {
+      const wrap = document.getElementById('chartWrap');
+      const points = [];
+      for (let i = 1; i <= TOTAL_DAYS; i++) {
+        const w = data.days[i] && data.days[i].weight;
+        if (w !== undefined && w !== '' && !isNaN(parseFloat(w))) {
+          points.push({ day: i, weight: parseFloat(w) });
+        }
+      }
+
+      if (points.length < 2) {
+        wrap.innerHTML = '<div class="chart-header"><div class="chart-title">Жингийн өөрчлөлт</div></div>'
+          + '<div class="chart-empty">' + (points.length === 0
+            ? 'Жинээ өдөр бүр оруулж эхлэхэд график автоматаар гарна'
+            : '2 дахь өдрийнхөө жинг оруулсаны дараа график зурагдана') + '</div>';
+        return;
+      }
+
+      const minW = Math.min.apply(null, points.map(p => p.weight));
+      const maxW = Math.max.apply(null, points.map(p => p.weight));
+      const range = Math.max(maxW - minW, 0.5);
+      const yMin = minW - range * 0.25;
+      const yMax = maxW + range * 0.25;
+
+      const W = 600, H = 100, P = 22;
+      const innerW = W - P * 2;
+      const innerH = H - P * 2;
+      const xScale = day => P + ((day - 1) / (TOTAL_DAYS - 1)) * innerW;
+      const yScale = w => P + ((yMax - w) / (yMax - yMin)) * innerH;
+
+      const linePath = points.map((p, i) =>
+        (i === 0 ? 'M' : 'L') + xScale(p.day).toFixed(1) + ',' + yScale(p.weight).toFixed(1)
+      ).join(' ');
+
+      const areaPath = linePath
+        + ' L' + xScale(points[points.length - 1].day).toFixed(1) + ',' + (H - P).toFixed(1)
+        + ' L' + xScale(points[0].day).toFixed(1) + ',' + (H - P).toFixed(1) + ' Z';
+
+      const change = points[points.length - 1].weight - points[0].weight;
+      const changeStr = (change > 0 ? '+' : '') + change.toFixed(1);
+      const changeColor = change <= 0 ? '#fde047' : '#fca5a5';
+
+      let dots = '';
+      for (const p of points) {
+        dots += '<circle cx="' + xScale(p.day).toFixed(1) + '" cy="' + yScale(p.weight).toFixed(1) + '" r="3.5" fill="white" stroke="#047857" stroke-width="1.5" />';
+      }
+
+      let labels = '';
+      labels += '<text x="' + (P - 4).toFixed(1) + '" y="' + (P + 4).toFixed(1) + '" font-size="9" fill="rgba(255,255,255,0.7)" text-anchor="end">' + yMax.toFixed(1) + '</text>';
+      labels += '<text x="' + (P - 4).toFixed(1) + '" y="' + (H - P + 4).toFixed(1) + '" font-size="9" fill="rgba(255,255,255,0.7)" text-anchor="end">' + yMin.toFixed(1) + '</text>';
+
+      wrap.innerHTML = '<div class="chart-header">'
+        + '<div class="chart-title">Жингийн өөрчлөлт (' + points.length + ' өдөр)</div>'
+        + '<div class="chart-change" style="color:' + changeColor + '">' + changeStr + ' кг</div>'
+        + '</div>'
+        + '<svg class="chart-svg" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">'
+        + '<defs><linearGradient id="cg1" x1="0" y1="0" x2="0" y2="1">'
+        + '<stop offset="0%" stop-color="white" stop-opacity="0.45"/>'
+        + '<stop offset="100%" stop-color="white" stop-opacity="0.02"/></linearGradient></defs>'
+        + '<path d="' + areaPath + '" fill="url(#cg1)" />'
+        + '<path d="' + linePath + '" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />'
+        + dots
+        + labels
+        + '</svg>';
+    }
+
+    function renderNextUp() {
+      const el = document.getElementById('nextUp');
+      const next = getNextUp();
+      el.classList.remove('overdue', 'now', 'allDone');
+
+      if (next.allDone) {
+        el.classList.add('allDone');
+        el.innerHTML = '<div class="next-up-info">'
+          + '<div class="next-up-label">Өнөөдөр</div>'
+          + '<div class="next-up-task">Бүх даалгавар биелсэн. Сайн байна.</div>'
+          + '</div>';
+        return;
+      }
+
+      let label = 'Дараагийн';
+      if (next.status === 'overdue') { label = 'Хоцорсон'; el.classList.add('overdue'); }
+      else if (next.status === 'now') { label = 'Одоо хийх'; el.classList.add('now'); }
+
+      el.innerHTML = '<div class="next-up-info">'
+        + '<div class="next-up-label">' + label + '</div>'
+        + '<div class="next-up-task">' + next.label + '</div>'
+        + '</div>'
+        + '<div class="next-up-time">' + next.time + '</div>';
+    }
+
+    function renderDayNav() {
+      const today = getCurrentDay(data);
+      document.getElementById('dayLabel').textContent = 'Өдөр ' + viewDay;
+      document.getElementById('todayBadge').style.display = (viewDay === today) ? '' : 'none';
+      document.getElementById('prevDay').disabled = viewDay <= 1;
+      document.getElementById('nextDay').disabled = viewDay >= TOTAL_DAYS;
+    }
+
+    function renderDay() {
+      const container = document.getElementById('dayContainer');
+      const day = getDay(viewDay);
+
+      const grouped = {};
+      const order = [];
+      tasks.forEach(t => {
+        if (!grouped[t.section]) {
+          grouped[t.section] = { color: t.sectionColor, items: [] };
+          order.push(t.section);
+        }
+        grouped[t.section].items.push(t);
+      });
+
+      let html = '';
+      for (const sec of order) {
+        const group = grouped[sec];
+        html += '<div class="section">'
+          + '<div class="section-header">'
+          + '<div class="section-dot" style="background:' + group.color + '"></div>'
+          + '<div class="section-title">' + sec + '</div>'
+          + '</div>';
+        for (const t of group.items) {
+          const checked = !!day.tasks[t.id];
+          const expanded = expandedTasks.has(t.id);
+          const note = day.taskNotes[t.id] || '';
+          const cls = ['task-row'];
+          if (checked) cls.push('done');
+          if (expanded) cls.push('expanded');
+          html += '<div class="' + cls.join(' ') + '">'
+            + '<div class="task ' + (checked ? 'done' : '') + '">'
+            + '<input type="checkbox" id="t-' + t.id + '" data-task="' + t.id + '"' + (checked ? ' checked' : '') + ' />'
+            + '<label for="t-' + t.id + '">' + t.label + '</label>'
+            + '<button class="task-expand ' + (expanded ? 'open' : '') + '" data-toggle="' + t.id + '" aria-label="Дэлгэрэнгүй">▾</button>'
+            + '</div>'
+            + '<div class="task-detail">'
+            + '<div class="hint">' + t.hint + '</div>'
+            + '<textarea data-note="' + t.id + '" placeholder="Юу хийсэн вэ?...">' + escapeHtml(note) + '</textarea>'
+            + '</div>'
+            + '</div>';
+        }
+        html += '</div>';
+      }
+
+      html += '<div class="section">'
+        + '<div class="section-header">'
+        + '<div class="section-dot" style="background:#10b981"></div>'
+        + '<div class="section-title">Хэмжилт ба өдрийн тэмдэглэл</div>'
+        + '</div>'
+        + '<div class="extra">'
+        + '<div class="input-group"><label>Жин (кг)</label>'
+        + '<input type="number" step="0.1" id="weightInput" value="' + (day.weight || '') + '" placeholder="88.0" inputmode="decimal" /></div>'
+        + '<div class="input-group"><label>Бэлхүүс (см)</label>'
+        + '<input type="number" step="0.5" id="waistInput" value="' + (day.waist || '') + '" placeholder="—" inputmode="decimal" /></div>'
+        + '<textarea id="notesInput" placeholder="Өдрийн ерөнхий тэмдэглэл, мэдрэмж, бэрхшээл, амжилт...">' + escapeHtml(day.notes || '') + '</textarea>'
+        + '</div></div>';
+
+      const dayDone = tasks.filter(t => day.tasks[t.id]).length;
+      const dayPct = Math.round((dayDone / tasks.length) * 100);
+      html += '<div class="day-progress">'
+        + '<div class="day-progress-text"><span>Өдрийн гүйцэтгэл</span><span><strong>' + dayDone + '</strong> / ' + tasks.length + ' (' + dayPct + '%)</span></div>'
+        + '<div class="progress-bar"><div class="progress-fill" style="width:' + dayPct + '%"></div></div>'
+        + '</div>';
+
+      container.innerHTML = html;
+      attachDayHandlers(day);
+    }
+
+    function attachDayHandlers(day) {
+      document.querySelectorAll('input[type="checkbox"][data-task]').forEach(el => {
+        el.addEventListener('change', e => {
+          const tid = e.target.dataset.task;
+          day.tasks[tid] = e.target.checked;
+          saveData(data);
+          renderHeader();
+          renderTimeline();
+          renderNextUp();
+          const row = e.target.closest('.task-row');
+          row.classList.toggle('done', e.target.checked);
+          e.target.closest('.task').classList.toggle('done', e.target.checked);
+          updateDayProgressBar();
+        });
+      });
+
+      document.querySelectorAll('[data-toggle]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tid = btn.dataset.toggle;
+          if (expandedTasks.has(tid)) expandedTasks.delete(tid);
+          else expandedTasks.add(tid);
+          const row = btn.closest('.task-row');
+          row.classList.toggle('expanded');
+          btn.classList.toggle('open');
+        });
+      });
+
+      document.querySelectorAll('textarea[data-note]').forEach(el => {
+        el.addEventListener('input', e => {
+          day.taskNotes[e.target.dataset.note] = e.target.value;
+          saveData(data);
+        });
+      });
+
+      const weightEl = document.getElementById('weightInput');
+      weightEl.addEventListener('input', e => {
+        day.weight = e.target.value;
+        saveData(data);
+      });
+      weightEl.addEventListener('blur', () => renderChart());
+
+      document.getElementById('waistInput').addEventListener('input', e => {
+        day.waist = e.target.value;
+        saveData(data);
+      });
+      document.getElementById('notesInput').addEventListener('input', e => {
+        day.notes = e.target.value;
+        saveData(data);
+      });
+    }
+
+    function updateDayProgressBar() {
+      const day = getDay(viewDay);
+      const dayDone = tasks.filter(t => day.tasks[t.id]).length;
+      const dayPct = Math.round((dayDone / tasks.length) * 100);
+      const wrap = document.querySelector('.day-progress');
+      if (!wrap) return;
+      wrap.querySelector('.progress-fill').style.width = dayPct + '%';
+      wrap.querySelector('.day-progress-text strong').textContent = dayDone;
+      wrap.querySelector('.day-progress-text span:last-child').innerHTML = '<strong>' + dayDone + '</strong> / ' + tasks.length + ' (' + dayPct + '%)';
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[c]);
+    }
+
+    function render() {
+      renderHeader();
+      renderTimeline();
+      renderChart();
+      renderNextUp();
+      renderDayNav();
+      renderDay();
+    }
+
+    document.getElementById('prevDay').addEventListener('click', () => { if (viewDay > 1) { viewDay--; render(); } });
+    document.getElementById('nextDay').addEventListener('click', () => { if (viewDay < TOTAL_DAYS) { viewDay++; render(); } });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'health14-backup-' + todayISO() + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('importBtn').addEventListener('click', () => {
+      document.getElementById('fileInput').click();
+    });
+
+    document.getElementById('fileInput').addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const imported = JSON.parse(ev.target.result);
+          if (!imported.startDate || !imported.days) throw new Error('Буруу файл');
+          if (!confirm('Импорт хийвэл одоогийн өгөгдөл солигдоно. Үргэлжлүүлэх үү?')) return;
+          data = imported;
+          saveData(data);
+          viewDay = getCurrentDay(data);
+          render();
+          alert('Амжилттай оруулсан.');
+        } catch (err) {
+          alert('Файл унших боломжгүй: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      if (confirm('Бүх өгөгдлийг устгах уу? Энэ үйлдлийг буцаах боломжгүй.\n\nЗөвлөгөө: эхлээд "Тэмдэглэлээ татах"-аар backup аваарай.')) {
+        localStorage.removeItem(STORAGE_KEY);
+        data = loadData();
+        viewDay = 1;
+        expandedTasks.clear();
+        render();
+      }
+    });
+
+    setInterval(renderNextUp, 60000);
+
+    render();
+  </script>
+</body>
+</html>

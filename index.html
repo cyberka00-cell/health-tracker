@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#047857" />
   <title>14 хоног — Эрүүл амьдралын төлөвлөгөө</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
       --bg: #f8fafc;
@@ -21,6 +22,7 @@
       --goal: #e11d48;
       --study: #8b5cf6;
       --sleep: #6366f1;
+      --error: #dc2626;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -37,6 +39,94 @@
       -webkit-font-smoothing: antialiased;
       min-height: 100vh;
     }
+
+    /* SPLASH / LOADING */
+    .splash {
+      position: fixed; inset: 0;
+      background: linear-gradient(135deg, #047857 0%, #10b981 100%);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000; color: white; font-weight: 600; font-size: 14px;
+    }
+    .splash.hidden { display: none; }
+    .splash-spinner {
+      width: 28px; height: 28px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* AUTH SCREEN */
+    .auth-screen {
+      min-height: calc(100vh - 28px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px 0;
+    }
+    .auth-card {
+      background: white;
+      border-radius: 20px;
+      padding: 32px 28px;
+      box-shadow: 0 12px 32px rgba(4,120,87,0.12);
+      width: 100%;
+      max-width: 380px;
+      border: 1px solid var(--border);
+    }
+    .auth-logo {
+      width: 56px; height: 56px;
+      background: linear-gradient(135deg, #047857, #10b981);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 22px; font-weight: 700;
+      margin: 0 auto 16px; letter-spacing: -0.5px;
+    }
+    .auth-title { font-size: 20px; font-weight: 700; text-align: center; margin-bottom: 4px; }
+    .auth-sub { font-size: 13px; color: var(--text-muted); text-align: center; margin-bottom: 24px; }
+
+    .auth-group { margin-bottom: 14px; }
+    .auth-group label {
+      display: block; font-size: 11px; font-weight: 700;
+      color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 6px;
+    }
+    .auth-group input {
+      width: 100%; font-family: inherit; font-size: 15px;
+      padding: 11px 14px; border: 1px solid var(--border);
+      border-radius: 10px; background: #f8fafc;
+      color: var(--text); outline: none; transition: all 0.15s;
+    }
+    .auth-group input:focus {
+      border-color: var(--primary); background: white;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+    }
+    .auth-error {
+      font-size: 13px; color: var(--error);
+      background: #fef2f2; border: 1px solid #fecaca;
+      padding: 9px 12px; border-radius: 8px;
+      margin-bottom: 12px; display: none;
+    }
+    .auth-error.show { display: block; }
+
+    .auth-btn {
+      width: 100%; padding: 12px;
+      background: linear-gradient(135deg, #047857, #10b981);
+      color: white; border: none; border-radius: 10px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      transition: all 0.15s;
+      box-shadow: 0 2px 6px rgba(4,120,87,0.2);
+    }
+    .auth-btn:hover:not(:disabled) { box-shadow: 0 4px 10px rgba(4,120,87,0.3); transform: translateY(-1px); }
+    .auth-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .auth-toggle { text-align: center; margin-top: 16px; font-size: 13px; }
+    .auth-toggle a {
+      color: var(--primary-dark); text-decoration: none;
+      font-weight: 600; cursor: pointer;
+    }
+    .auth-toggle a:hover { text-decoration: underline; }
+
+    .auth-hint { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
 
     /* HEADER */
     header {
@@ -60,8 +150,30 @@
       background: rgba(255,255,255,0.06); pointer-events: none;
     }
     .header-content { position: relative; z-index: 1; }
+
+    .header-top-row {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 12px; margin-bottom: 14px;
+    }
+    .header-title-block { flex: 1; min-width: 0; }
     h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
-    .header-sub { font-size: 12.5px; opacity: 0.88; margin-top: 3px; margin-bottom: 18px; font-weight: 500; }
+    .header-sub { font-size: 12.5px; opacity: 0.88; margin-top: 3px; font-weight: 500; }
+
+    .user-badge {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.18);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      padding: 6px 10px 6px 6px; border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.22);
+      font-size: 12px; font-weight: 600;
+      flex-shrink: 0;
+    }
+    .user-avatar {
+      width: 26px; height: 26px; border-radius: 50%;
+      background: white; color: var(--primary-dark);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; text-transform: uppercase;
+    }
 
     .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
     .stat {
@@ -78,7 +190,6 @@
     .progress-bar { height: 6px; background: rgba(255,255,255,0.22); border-radius: 3px; overflow: hidden; margin-bottom: 14px; }
     .progress-fill { height: 100%; background: white; border-radius: 3px; transition: width 0.5s ease; box-shadow: 0 0 8px rgba(255,255,255,0.5); }
 
-    /* 14-day timeline */
     .timeline {
       display: grid; grid-template-columns: repeat(14, 1fr);
       gap: 4px; margin-bottom: 14px;
@@ -105,7 +216,6 @@
     .timeline-day.viewing { border-color: white; box-shadow: 0 0 0 2px rgba(255,255,255,0.3); }
     .timeline-day.full .timeline-fill { background: #fde047; }
 
-    /* Weight chart */
     .chart-wrap {
       background: rgba(255,255,255,0.12);
       border-radius: 12px;
@@ -118,7 +228,32 @@
     .chart-svg { width: 100%; height: 100px; display: block; }
     .chart-empty { font-size: 12px; opacity: 0.75; text-align: center; padding: 24px 8px; }
 
-    /* Next up */
+    /* SYNC STATUS */
+    .sync-status {
+      position: fixed; bottom: 16px; right: 16px;
+      background: white; border: 1px solid var(--border);
+      padding: 8px 14px; border-radius: 20px;
+      font-size: 12px; font-weight: 600; color: var(--text-muted);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      display: flex; align-items: center; gap: 8px;
+      z-index: 100;
+      transition: opacity 0.3s, transform 0.3s;
+      opacity: 0; transform: translateY(8px); pointer-events: none;
+    }
+    .sync-status.show { opacity: 1; transform: translateY(0); }
+    .sync-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--accent);
+      animation: pulse-dot 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+    .sync-status.saved .sync-dot { background: var(--primary); animation: none; }
+    .sync-status.error .sync-dot { background: var(--error); animation: none; }
+
+    /* NEXT UP */
     .next-up {
       background: white;
       border-radius: 14px;
@@ -141,7 +276,7 @@
     .next-up-task { font-size: 14px; font-weight: 600; margin-top: 2px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .next-up-time { font-size: 12px; color: var(--text-muted); font-weight: 600; flex-shrink: 0; padding: 4px 10px; background: var(--bg); border-radius: 8px; }
 
-    /* Day navigator */
+    /* DAY NAV */
     .day-nav {
       display: flex; align-items: center; justify-content: space-between;
       background: white; border-radius: 14px; padding: 8px 12px;
@@ -157,7 +292,6 @@
     .day-label { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
     .today-badge { background: var(--primary); color: white; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 10px; letter-spacing: 0.5px; }
 
-    /* Main */
     main { background: white; border-radius: 16px; padding: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
 
     .section { margin-bottom: 18px; }
@@ -169,7 +303,6 @@
       text-transform: uppercase; letter-spacing: 0.8px;
     }
 
-    /* Tasks */
     .task-row {
       border-radius: 12px;
       margin-bottom: 4px;
@@ -210,10 +343,7 @@
     .task-expand:hover { background: rgba(0,0,0,0.06); color: var(--text); }
     .task-expand.open { transform: rotate(180deg); }
 
-    .task-detail {
-      padding: 0 12px 12px 46px;
-      display: none;
-    }
+    .task-detail { padding: 0 12px 12px 46px; display: none; }
     .task-row.expanded .task-detail { display: block; }
     .task-detail textarea {
       width: 100%; font-family: inherit; font-size: 13px;
@@ -225,7 +355,6 @@
     .task-detail textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
     .task-detail .hint { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
 
-    /* Inputs */
     .extra { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
     .input-group { display: flex; flex-direction: column; }
     .input-group > label { font-size: 11px; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 700; }
@@ -241,32 +370,32 @@
     }
     .extra textarea { grid-column: 1 / -1; resize: vertical; min-height: 70px; line-height: 1.5; }
 
-    /* Day progress */
     .day-progress { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
     .day-progress-text { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
     .day-progress-text strong { color: var(--text); font-weight: 700; }
     .day-progress .progress-bar { background: var(--border); height: 8px; }
     .day-progress .progress-fill { background: linear-gradient(90deg, var(--primary), var(--primary-dark)); box-shadow: none; }
 
-    /* Footer */
-    footer { margin-top: 14px; padding: 8px 0 24px; }
+    footer { margin-top: 14px; padding: 8px 0 60px; }
     .footer-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
     .footer-actions button {
       background: white; border: 1px solid var(--border); color: var(--text-muted);
       padding: 8px 14px; border-radius: 10px; cursor: pointer; font-size: 12px;
-      font-weight: 600;
-      transition: all 0.15s;
+      font-weight: 600; transition: all 0.15s;
     }
     .footer-actions button:hover { background: var(--bg); color: var(--text); border-color: #cbd5e1; }
     .footer-actions button.danger:hover { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+    .footer-actions button.signout:hover { background: #fef3c7; color: #92400e; border-color: #fde68a; }
 
     .file-input { display: none; }
 
-    /* Mobile */
     @media (max-width: 480px) {
       body { padding: 8px; }
-      header { padding: 18px 16px; border-radius: 16px; }
-      h1 { font-size: 19px; }
+      header { padding: 16px; border-radius: 16px; }
+      h1 { font-size: 18px; }
+      .header-top-row { gap: 8px; }
+      .user-badge { padding: 4px 8px 4px 4px; font-size: 11px; }
+      .user-avatar { width: 22px; height: 22px; font-size: 11px; }
       .stats { gap: 6px; }
       .stat { padding: 10px 4px; }
       .stat-value { font-size: 18px; }
@@ -282,64 +411,125 @@
       .next-up { padding: 10px 12px; }
       .next-up-task { font-size: 13px; }
       .footer-actions button { padding: 7px 11px; font-size: 11px; }
+      .auth-card { padding: 24px 20px; }
+      .sync-status { bottom: 10px; right: 10px; font-size: 11px; }
     }
   </style>
 </head>
 <body>
 
-  <header>
-    <div class="header-content">
-      <h1>14 хоног — Эрүүл амьдрал</h1>
-      <div class="header-sub">16:8 IF · Хөдөлгөөн · Чихэргүй · Англи хэл</div>
-
-      <div class="stats">
-        <div class="stat">
-          <div class="stat-label">Өнөөдөр</div>
-          <div class="stat-value" id="todayDay">—</div>
-        </div>
-        <div class="stat streak" id="streakStat">
-          <div class="stat-label">Чихэргүй цуваа</div>
-          <div class="stat-value" id="sugarStreak">0</div>
-        </div>
-        <div class="stat">
-          <div class="stat-label">Гүйцэтгэл</div>
-          <div class="stat-value" id="overallPct">0%</div>
-        </div>
-      </div>
-
-      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-
-      <div class="timeline" id="timeline"></div>
-
-      <div class="chart-wrap" id="chartWrap"></div>
-    </div>
-  </header>
-
-  <div class="next-up" id="nextUp"></div>
-
-  <div class="day-nav">
-    <button id="prevDay" aria-label="Өмнөх өдөр">←</button>
-    <div class="day-label">
-      <span id="dayLabel">Өдөр 1</span>
-      <span class="today-badge" id="todayBadge" style="display:none">ӨНӨӨДӨР</span>
-    </div>
-    <button id="nextDay" aria-label="Дараагийн өдөр">→</button>
+  <div class="splash" id="splash">
+    <div class="splash-spinner"></div>
+    <div>Уншиж байна...</div>
   </div>
 
-  <main id="dayContainer"></main>
+  <!-- AUTH SCREEN -->
+  <div class="auth-screen" id="authScreen" style="display:none">
+    <div class="auth-card">
+      <div class="auth-logo">14</div>
+      <div class="auth-title" id="authTitle">Нэвтрэх</div>
+      <div class="auth-sub">Эрүүл амьдралын төлөвлөгөө</div>
 
-  <footer>
-    <div class="footer-actions">
-      <button id="exportBtn">Тэмдэглэлээ татах</button>
-      <button id="importBtn">Тэмдэглэл оруулах</button>
-      <button id="resetBtn" class="danger">Бүх өгөгдлийг устгах</button>
+      <form id="authForm">
+        <div class="auth-error" id="authError"></div>
+
+        <div class="auth-group">
+          <label for="usernameInput">Хэрэглэгчийн нэр</label>
+          <input type="text" id="usernameInput" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required />
+          <div class="auth-hint">Англи үсэг, тоо, цэг, доогуур зураас</div>
+        </div>
+
+        <div class="auth-group">
+          <label for="passwordInput">Нууц үг</label>
+          <input type="password" id="passwordInput" autocomplete="current-password" required minlength="6" />
+          <div class="auth-hint">Доод тал нь 6 тэмдэгт</div>
+        </div>
+
+        <button type="submit" class="auth-btn" id="authSubmitBtn">Нэвтрэх</button>
+
+        <div class="auth-toggle">
+          <a id="authToggleLink">Бүртгэл байхгүй юу? Бүртгүүлэх</a>
+        </div>
+      </form>
     </div>
-    <input type="file" id="fileInput" class="file-input" accept="application/json" />
-  </footer>
+  </div>
+
+  <!-- APP SCREEN -->
+  <div id="appScreen" style="display:none">
+    <header>
+      <div class="header-content">
+        <div class="header-top-row">
+          <div class="header-title-block">
+            <h1>14 хоног — Эрүүл амьдрал</h1>
+            <div class="header-sub">16:8 IF · Хөдөлгөөн · Чихэргүй · Англи хэл</div>
+          </div>
+          <div class="user-badge" id="userBadge">
+            <div class="user-avatar" id="userAvatar">?</div>
+            <span id="userName">—</span>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-label">Өнөөдөр</div>
+            <div class="stat-value" id="todayDay">—</div>
+          </div>
+          <div class="stat streak" id="streakStat">
+            <div class="stat-label">Чихэргүй цуваа</div>
+            <div class="stat-value" id="sugarStreak">0</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Гүйцэтгэл</div>
+            <div class="stat-value" id="overallPct">0%</div>
+          </div>
+        </div>
+
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="timeline" id="timeline"></div>
+        <div class="chart-wrap" id="chartWrap"></div>
+      </div>
+    </header>
+
+    <div class="next-up" id="nextUp"></div>
+
+    <div class="day-nav">
+      <button id="prevDay" aria-label="Өмнөх өдөр">←</button>
+      <div class="day-label">
+        <span id="dayLabel">Өдөр 1</span>
+        <span class="today-badge" id="todayBadge" style="display:none">ӨНӨӨДӨР</span>
+      </div>
+      <button id="nextDay" aria-label="Дараагийн өдөр">→</button>
+    </div>
+
+    <main id="dayContainer"></main>
+
+    <footer>
+      <div class="footer-actions">
+        <button id="exportBtn">Backup татах</button>
+        <button id="importBtn">Backup оруулах</button>
+        <button id="signOutBtn" class="signout">Гарах</button>
+        <button id="resetBtn" class="danger">Бүх өгөгдлийг устгах</button>
+      </div>
+      <input type="file" id="fileInput" class="file-input" accept="application/json" />
+    </footer>
+  </div>
+
+  <div class="sync-status" id="syncStatus">
+    <div class="sync-dot"></div>
+    <span id="syncText">Хадгалж байна...</span>
+  </div>
 
   <script>
+    const SUPABASE_URL = 'https://tvkwfboefeenmouonrwt.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_PXyaiaHw0kvpmK_SiljZ1A_VnLwnIae';
+    const FAKE_EMAIL_DOMAIN = '@family.local';
+
     const TOTAL_DAYS = 14;
     const STORAGE_KEY = 'health14-tracker';
+
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true }
+    });
 
     const tasks = [
       { id: 'walk',          label: 'Өглөөний алхалт 30-45 мин',           section: 'Хөдөлгөөн',   sectionColor: '#3b82f6', time: '07:00', hint: 'Хэдэн минут? Маршрут? Мэдрэмж?' },
@@ -359,21 +549,223 @@
       d.setHours(0, 0, 0, 0);
       return d.toISOString().slice(0, 10);
     };
-
     const initData = () => ({ startDate: todayISO(), days: {} });
 
-    function loadData() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return initData();
-        const p = JSON.parse(raw);
-        if (!p.startDate) p.startDate = todayISO();
-        if (!p.days) p.days = {};
-        return p;
-      } catch (e) { return initData(); }
+    let currentUser = null;
+    let currentUsername = null;
+    let data = initData();
+    let viewDay = 1;
+    let expandedTasks = new Set();
+    let saveTimer = null;
+    let isSignupMode = false;
+
+    /* ========= AUTH ========= */
+
+    function showSplash() { document.getElementById('splash').classList.remove('hidden'); }
+    function hideSplash() { document.getElementById('splash').classList.add('hidden'); }
+
+    function showAuth() {
+      document.getElementById('authScreen').style.display = '';
+      document.getElementById('appScreen').style.display = 'none';
     }
 
-    const saveData = d => localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
+    async function showApp() {
+      document.getElementById('authScreen').style.display = 'none';
+      document.getElementById('appScreen').style.display = '';
+      document.getElementById('userName').textContent = currentUsername || '—';
+      document.getElementById('userAvatar').textContent = (currentUsername || '?').charAt(0);
+      await loadFromCloud();
+      viewDay = getCurrentDay(data);
+      render();
+    }
+
+    function setSyncStatus(state, text) {
+      const el = document.getElementById('syncStatus');
+      el.classList.remove('saved', 'error');
+      if (state === 'saved') el.classList.add('saved');
+      else if (state === 'error') el.classList.add('error');
+      document.getElementById('syncText').textContent = text;
+      el.classList.add('show');
+      if (state === 'saved') {
+        setTimeout(() => el.classList.remove('show'), 1500);
+      }
+    }
+
+    function updateAuthMode() {
+      document.getElementById('authTitle').textContent = isSignupMode ? 'Бүртгүүлэх' : 'Нэвтрэх';
+      document.getElementById('authSubmitBtn').textContent = isSignupMode ? 'Бүртгүүлэх' : 'Нэвтрэх';
+      document.getElementById('authToggleLink').textContent = isSignupMode
+        ? 'Бүртгэлтэй юу? Нэвтрэх'
+        : 'Бүртгэл байхгүй юу? Бүртгүүлэх';
+      document.getElementById('passwordInput').setAttribute('autocomplete', isSignupMode ? 'new-password' : 'current-password');
+    }
+
+    function translateAuthError(msg) {
+      const m = String(msg || '').toLowerCase();
+      if (m.includes('invalid login') || m.includes('invalid credentials')) return 'Хэрэглэгчийн нэр эсвэл нууц үг буруу';
+      if (m.includes('already registered') || m.includes('already exists') || m.includes('user already')) return 'Энэ нэр аль хэдийн бүртгэгдсэн';
+      if (m.includes('password should be at least') || m.includes('weak password')) return 'Нууц үг доод тал нь 6 тэмдэгт байх ёстой';
+      if (m.includes('rate limit')) return 'Хэт олон оролдлого хийсэн. Хэсэг хүлээгээд дахин оролдоорой';
+      if (m.includes('email not confirmed')) return 'Имэйл баталгаажуулалт хэрэгтэй. Supabase Authentication settings-аас "Confirm email"-ийг OFF болгоно уу';
+      return msg || 'Алдаа гарлаа';
+    }
+
+    function showAuthError(msg) {
+      const el = document.getElementById('authError');
+      el.textContent = msg;
+      el.classList.add('show');
+    }
+    function clearAuthError() {
+      document.getElementById('authError').classList.remove('show');
+    }
+
+    async function handleAuth(e) {
+      e.preventDefault();
+      clearAuthError();
+
+      const username = document.getElementById('usernameInput').value.trim().toLowerCase();
+      const password = document.getElementById('passwordInput').value;
+
+      if (!/^[a-z0-9._]{2,32}$/.test(username)) {
+        showAuthError('Нэр 2-32 тэмдэгт, зөвхөн англи үсэг/тоо/цэг/доогуур зураас');
+        return;
+      }
+      if (password.length < 6) {
+        showAuthError('Нууц үг доод тал нь 6 тэмдэгт');
+        return;
+      }
+
+      const email = username + FAKE_EMAIL_DOMAIN;
+      const btn = document.getElementById('authSubmitBtn');
+      btn.disabled = true;
+      const originalText = btn.textContent;
+      btn.textContent = 'Уншиж байна...';
+
+      try {
+        if (isSignupMode) {
+          const { data: result, error } = await sb.auth.signUp({
+            email, password,
+            options: { data: { username } }
+          });
+          if (error) throw error;
+          if (result.session) {
+            currentUser = result.user;
+            currentUsername = username;
+            await showApp();
+          } else {
+            showAuthError('Бүртгэл амжилттай. Одоо нэвтэрнэ үү.');
+            isSignupMode = false;
+            updateAuthMode();
+          }
+        } else {
+          const { data: result, error } = await sb.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+          currentUser = result.user;
+          currentUsername = username;
+          await showApp();
+        }
+      } catch (err) {
+        showAuthError(translateAuthError(err.message));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    }
+
+    async function handleSignOut() {
+      if (!confirm('Гарах уу? Дараа нь нэвтрэхэд өгөгдөл нь cloud-аас сэргээгдэнэ.')) return;
+      await sb.auth.signOut();
+      currentUser = null;
+      currentUsername = null;
+      data = initData();
+      viewDay = 1;
+      expandedTasks.clear();
+      localStorage.removeItem(STORAGE_KEY);
+      document.getElementById('passwordInput').value = '';
+      isSignupMode = false;
+      updateAuthMode();
+      showAuth();
+    }
+
+    /* ========= CLOUD SYNC ========= */
+
+    async function loadFromCloud() {
+      setSyncStatus('saving', 'Cloud-аас уншиж байна...');
+      try {
+        const { data: row, error } = await sb
+          .from('health_data')
+          .select('start_date, data')
+          .eq('user_id', currentUser.id)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (row && row.start_date) {
+          data = {
+            startDate: row.start_date,
+            days: row.data || {}
+          };
+          saveLocal();
+          setSyncStatus('saved', 'Шинэ өгөгдөл');
+        } else {
+          // First-time login — check for local data to migrate
+          const local = localStorage.getItem(STORAGE_KEY);
+          let parsed = null;
+          try { parsed = local ? JSON.parse(local) : null; } catch(e) {}
+
+          if (parsed && parsed.days && Object.keys(parsed.days).length > 0) {
+            const migrate = confirm('Энэ browser-т өмнө хадгалсан өгөгдөл байна.\n\nҮүнийг өөрийн cloud-д шилжүүлж хадгалах уу?\n\n(Үгүй сонгобол шинээр эхэлнэ)');
+            if (migrate) {
+              data = parsed;
+            } else {
+              data = initData();
+            }
+          } else {
+            data = initData();
+          }
+          await saveToCloudNow();
+        }
+      } catch (err) {
+        console.error('Load error:', err);
+        // Fall back to local
+        try {
+          const local = localStorage.getItem(STORAGE_KEY);
+          if (local) data = JSON.parse(local);
+        } catch(e) {}
+        setSyncStatus('error', 'Cloud алдаа — локал ашиглаж байна');
+      }
+    }
+
+    async function saveToCloudNow() {
+      if (!currentUser) return;
+      try {
+        setSyncStatus('saving', 'Хадгалж байна...');
+        const { error } = await sb.from('health_data').upsert({
+          user_id: currentUser.id,
+          start_date: data.startDate,
+          data: data.days,
+          updated_at: new Date().toISOString()
+        });
+        if (error) throw error;
+        setSyncStatus('saved', 'Хадгалагдсан');
+      } catch (err) {
+        console.error('Save error:', err);
+        setSyncStatus('error', 'Cloud-д хадгалж чадсангүй');
+      }
+    }
+
+    function saveLocal() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(e) {}
+    }
+
+    function scheduleSave() {
+      saveLocal();
+      if (!currentUser) return;
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(saveToCloudNow, 800);
+    }
+
+    /* ========= TRACKER LOGIC ========= */
 
     function getCurrentDay(d) {
       const start = new Date(d.startDate + 'T00:00:00');
@@ -417,24 +809,27 @@
         .filter(t => !day.tasks[t.id])
         .map(t => {
           const [h, m] = t.time.split(':').map(Number);
-          return { ...t, minutes: h * 60 + m };
+          return Object.assign({}, t, { minutes: h * 60 + m });
         });
 
       if (pending.length === 0) return { allDone: true };
 
       pending.sort((a, b) => a.minutes - b.minutes);
-
       const upcoming = pending.find(t => t.minutes >= nowMin);
       if (upcoming) {
         const delta = upcoming.minutes - nowMin;
-        return { ...upcoming, status: delta <= 30 ? 'now' : 'upcoming', delta };
+        return Object.assign({}, upcoming, { status: delta <= 30 ? 'now' : 'upcoming', delta });
       }
-      return { ...pending[pending.length - 1], status: 'overdue' };
+      return Object.assign({}, pending[pending.length - 1], { status: 'overdue' });
     }
 
-    let data = loadData();
-    let viewDay = getCurrentDay(data);
-    let expandedTasks = new Set();
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[c]);
+    }
+
+    /* ========= RENDERING ========= */
 
     function renderHeader() {
       const today = getCurrentDay(data);
@@ -540,8 +935,7 @@
         + '<stop offset="100%" stop-color="white" stop-opacity="0.02"/></linearGradient></defs>'
         + '<path d="' + areaPath + '" fill="url(#cg1)" />'
         + '<path d="' + linePath + '" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />'
-        + dots
-        + labels
+        + dots + labels
         + '</svg>';
     }
 
@@ -651,7 +1045,7 @@
         el.addEventListener('change', e => {
           const tid = e.target.dataset.task;
           day.tasks[tid] = e.target.checked;
-          saveData(data);
+          scheduleSave();
           renderHeader();
           renderTimeline();
           renderNextUp();
@@ -676,24 +1070,24 @@
       document.querySelectorAll('textarea[data-note]').forEach(el => {
         el.addEventListener('input', e => {
           day.taskNotes[e.target.dataset.note] = e.target.value;
-          saveData(data);
+          scheduleSave();
         });
       });
 
       const weightEl = document.getElementById('weightInput');
       weightEl.addEventListener('input', e => {
         day.weight = e.target.value;
-        saveData(data);
+        scheduleSave();
       });
       weightEl.addEventListener('blur', () => renderChart());
 
       document.getElementById('waistInput').addEventListener('input', e => {
         day.waist = e.target.value;
-        saveData(data);
+        scheduleSave();
       });
       document.getElementById('notesInput').addEventListener('input', e => {
         day.notes = e.target.value;
-        saveData(data);
+        scheduleSave();
       });
     }
 
@@ -708,12 +1102,6 @@
       wrap.querySelector('.day-progress-text span:last-child').innerHTML = '<strong>' + dayDone + '</strong> / ' + tasks.length + ' (' + dayPct + '%)';
     }
 
-    function escapeHtml(s) {
-      return String(s).replace(/[&<>"']/g, c => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-      })[c]);
-    }
-
     function render() {
       renderHeader();
       renderTimeline();
@@ -723,6 +1111,17 @@
       renderDay();
     }
 
+    /* ========= EVENT HANDLERS ========= */
+
+    document.getElementById('authForm').addEventListener('submit', handleAuth);
+    document.getElementById('authToggleLink').addEventListener('click', e => {
+      e.preventDefault();
+      isSignupMode = !isSignupMode;
+      clearAuthError();
+      updateAuthMode();
+    });
+    document.getElementById('signOutBtn').addEventListener('click', handleSignOut);
+
     document.getElementById('prevDay').addEventListener('click', () => { if (viewDay > 1) { viewDay--; render(); } });
     document.getElementById('nextDay').addEventListener('click', () => { if (viewDay < TOTAL_DAYS) { viewDay++; render(); } });
 
@@ -731,7 +1130,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'health14-backup-' + todayISO() + '.json';
+      a.download = 'health14-backup-' + (currentUsername || 'me') + '-' + todayISO() + '.json';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -752,10 +1151,10 @@
           if (!imported.startDate || !imported.days) throw new Error('Буруу файл');
           if (!confirm('Импорт хийвэл одоогийн өгөгдөл солигдоно. Үргэлжлүүлэх үү?')) return;
           data = imported;
-          saveData(data);
           viewDay = getCurrentDay(data);
+          scheduleSave();
           render();
-          alert('Амжилттай оруулсан.');
+          alert('Амжилттай оруулсан. Cloud руу хадгалагдаж байна.');
         } catch (err) {
           alert('Файл унших боломжгүй: ' + err.message);
         }
@@ -764,19 +1163,53 @@
       e.target.value = '';
     });
 
-    document.getElementById('resetBtn').addEventListener('click', () => {
-      if (confirm('Бүх өгөгдлийг устгах уу? Энэ үйлдлийг буцаах боломжгүй.\n\nЗөвлөгөө: эхлээд "Тэмдэглэлээ татах"-аар backup аваарай.')) {
-        localStorage.removeItem(STORAGE_KEY);
-        data = loadData();
-        viewDay = 1;
-        expandedTasks.clear();
-        render();
-      }
+    document.getElementById('resetBtn').addEventListener('click', async () => {
+      if (!confirm('Бүх өгөгдлийг устгах уу? Энэ үйлдлийг буцаах боломжгүй.\n\nЗөвлөгөө: эхлээд "Backup татах"-аар backup аваарай.')) return;
+      data = initData();
+      viewDay = 1;
+      expandedTasks.clear();
+      await saveToCloudNow();
+      saveLocal();
+      render();
     });
 
-    setInterval(renderNextUp, 60000);
+    setInterval(() => {
+      if (currentUser && document.getElementById('appScreen').style.display !== 'none') {
+        renderNextUp();
+      }
+    }, 60000);
 
-    render();
+    /* ========= INITIALIZE ========= */
+
+    (async function init() {
+      try {
+        const { data: { session } } = await sb.auth.getSession();
+        if (session) {
+          currentUser = session.user;
+          // Recover username from user metadata or email
+          currentUsername = (session.user.user_metadata && session.user.user_metadata.username)
+            || (session.user.email || '').split('@')[0];
+          await showApp();
+        } else {
+          updateAuthMode();
+          showAuth();
+        }
+      } catch (err) {
+        console.error('Init error:', err);
+        updateAuthMode();
+        showAuth();
+      } finally {
+        hideSplash();
+      }
+
+      sb.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_OUT') {
+          currentUser = null;
+          currentUsername = null;
+          showAuth();
+        }
+      });
+    })();
   </script>
 </body>
 </html>
